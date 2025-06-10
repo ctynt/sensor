@@ -620,21 +620,7 @@ void callback(char *topic, byte *payload, unsigned int length) {
   handleCommand(doc.as<JsonObject>(), String(topic));
 }
 
-
-bool mqttPreviouslyConnected = false;
-
 void reconnectMQTT() {
-  // 如果之前连接过但现在断开，则说明是重连 —— 先发送所有设备下线状态
-  if (mqttPreviouslyConnected && !client.connected()) {
-    Serial.println("MQTT断开，发布设备下线状态...");
-    publishLightOffline();
-    publishFanOffline();
-    publishAlarmOffline();
-    publishTemOffline();
-    publishPirOffline();
-    publishSensorOffline();
-    mqttPreviouslyConnected = false;
-  }
 
   while (!client.connected()) {
     String clientId = "ESP8266-" + WiFi.macAddress();
@@ -642,7 +628,6 @@ void reconnectMQTT() {
     Serial.print("Connecting to MQTT...");
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
       Serial.println("connected");
-      mqttPreviouslyConnected = true;
 
       client.subscribe("device/+/control");
       client.subscribe("scene/+/control");
@@ -709,7 +694,14 @@ void loop() {
   static unsigned long lastStatusTime = 0;
   static unsigned long lastSensorUpdate = 0;
   static unsigned long lastPirCheck = 0;
+  static unsigned long lastHeartbeat = 0;
   unsigned long now = millis();
+
+   if (millis() - lastHeartbeat > 10000) {
+    String payload = "{\"device_id\":\"ESP001\", \"status\":1, \"timestamp\":" + String(millis()) + "}";
+    client.publish("device/ESP001/heartbeat", payload.c_str(), true);
+    lastHeartbeat = millis();
+  }
 
   // 每10秒上报设备状态
   if (now - lastStatusTime >= 10000) {
