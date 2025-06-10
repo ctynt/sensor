@@ -75,6 +75,126 @@ String dht_status_topic;
 String pir_status_topic;
 String sensor_status_topic;
 
+void publishLightOnMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = light_id;
+  doc["content"] = "灯已开启";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishLightOffMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = light_id;
+  doc["content"] = "灯已关闭";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishFanMinMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = fan_id;
+  doc["content"] = "风扇转速为 0";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishFanMaxMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = fan_id;
+  doc["content"] = "风扇转速为 255";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishBuzzerOnMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = buzzer_id;
+  doc["content"] = "蜂鸣器已开启";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishBuzzerOffMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = buzzer_id;
+  doc["content"] = "蜂鸣器已关闭";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishSensorHighMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = sensor_id;
+  doc["content"] = "光敏传感器检测到光照强度高";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishSensorLowMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = sensor_id;
+  doc["content"] = "光敏传感器检测到光照强度低";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishPirHighMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = pir_id;
+  doc["content"] = "人体红外传感器检测到有人靠近";
+  doc["type"] = "2";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishPirLowMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = pir_id;
+  doc["content"] = "人体红外传感器未检测到人员靠近";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishTemHighMsg() {
+  StaticJsonDocument<256> doc;
+  doc["messagedevice_id"] = dht_id;
+  doc["content"] = "温湿度传感器检测到温度过高";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
+void publishTemLowMsg() {
+  StaticJsonDocument<256> doc;
+  doc["message_device_id"] = dht_id;
+  doc["content"] = "温湿度传感器检测到温度正常";
+  doc["type"] = "1";
+  char buffer[256];
+  serializeJson(doc, buffer);
+  client.publish(light_status_topic.c_str(), buffer);
+}
+
 class DeviceManager {
 public:
   static void initDevices() {
@@ -105,28 +225,34 @@ public:
   static void led_off() { 
     setColor(true, true, true);
     device_status.led_on = false; 
+    publishLightOffMsg();
   }
   static void led_on() {
      setColor(false, false, false); 
      device_status.led_on = true;
+     publishLightOnMsg();
   }
   static void fan_on() { 
     analogWrite(FAN_PIN, 0); 
     device_status.fan_on = true;
+    publishFanMinMsg();
   }
   static void fan_off() { 
     analogWrite(FAN_PIN, 255); 
     device_status.fan_on = false;
+    publishFanMaxMsg();
   }
 
   static void buzzer_on()  {
   digitalWrite(BUZZER_PIN, LOW);   
   device_status.buzzer_on = true;  
+  publishBuzzerOnMsg();
 }
 
 static void buzzer_off() {
   digitalWrite(BUZZER_PIN, HIGH);   
   device_status.buzzer_on = false;  
+  publishBuzzerOffMsg();
 }
 
 
@@ -141,9 +267,11 @@ static void buzzer_off() {
     if (device_status.led_on && lightValue > 900) {
       led_off();
       Serial.println("光线强 关灯");
+      publishSensorHighMsg();
     } else if (!device_status.led_on && lightValue <= 900) {
       led_on();
       Serial.println("光线弱 打开灯");
+      publishSensorLowMsg();
     }
   }
 
@@ -157,9 +285,11 @@ static void buzzer_off() {
     if (lightValue <= 900 && !device_status.fan_on) {
       fan_on();
       Serial.println("白天 开风扇");
+      publishSensorHighMsg();
     } else if (lightValue > 900 && device_status.fan_on) {
       fan_off();
       Serial.println("晚上 关风扇");
+      publishSensorLowMsg();
     }
   }
 
@@ -172,10 +302,12 @@ static void buzzer_off() {
   Serial.println("priValue");
   Serial.println(motion);
   if ((motion == HIGH) && !device_status.buzzer_on) {   
-    buzzer_on();                              
+    buzzer_on();     
+    publishPirHighMsg();                         
   }
   else if (!motion && device_status.buzzer_on) {
-    buzzer_off();                            
+    buzzer_off();        
+    publishPirLowMsg();                    
   }
 }
 
@@ -198,12 +330,13 @@ static void updateLightByEnv() {
     Serial.print(humidityValue);
     Serial.println("%");
 
-    if (temperatureValue < 30) {
-
+    if (temperatureValue > 30) {
         Serial.println("温度过高，启动风扇...");
+        publishTemHighMsg();
         DeviceManager::fan_on();
     } else {
         Serial.println("温度正常，关闭风扇...");
+        publishTemLowMsg();
         DeviceManager::fan_off();
     }
   }
@@ -216,9 +349,11 @@ static void updateLightByEnv() {
   device_status.light_level=lightValue;
   if (lightValue >= 900) {
       Serial.println("环境光照较暗，开启补光LED");
+      publishSensorHighMsg();
       DeviceManager::led_on();
   } else {
       Serial.println("环境光照充足，关闭补光LED");
+      publishSensorLowMsg();
       DeviceManager::led_off();
   }
 
